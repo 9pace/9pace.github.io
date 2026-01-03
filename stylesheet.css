@@ -1,0 +1,13 @@
+@font-face {
+    font-family: 'century_schoolbookregular';
+    src: url('./fonts/centuryschoolbook-webfont.woff2') format('woff2'),
+         url('./fonts/centuryschoolbook-webfont.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+}
+
+body {
+    font-family: 'century_schoolbookregular', serif;
+    background-color: blue;
+    color: black;
+}
