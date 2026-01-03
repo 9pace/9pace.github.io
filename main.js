@@ -34,6 +34,19 @@ scene.add(light);
 // animation 
 function animate(t=0) {
     requestAnimationFrame(animate);
+    
+    // Sync canvas size with CSS
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    if (canvas.width !== w || canvas.height !== h) {
+        renderer.setSize(w, h, false);
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+    }
+
+    // rotation
+    mesh.rotation.x = t * 0.00015;
+    mesh.rotation.y = t * 0.0003;
     renderer.render(scene, camera);
 }
 animate();
