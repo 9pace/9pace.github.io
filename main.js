@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { OrbitControls } from "jsm/controls/OrbitControls.js"
 
 const canvas = document.getElementById("scene");
 const w = canvas.clientWidth;
@@ -18,6 +19,9 @@ camera.position.z = 5;
 
 // Scene
 const scene = new THREE.Scene();
+
+// define orbitcontrols
+const controls = new OrbitControls(camera, renderer.domElement);
 
 // Geo
 const geo = new THREE.IcosahedronGeometry(1.0, 3);
