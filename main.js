@@ -1,5 +1,6 @@
 import * as THREE from "three";
-import { OrbitControls } from "jsm/controls/OrbitControls.js"
+// import { OrbitControls } from "jsm/controls/OrbitControls.js"
+import { TrackballControls } from 'jsm/controls/TrackballControls.js';
 
 const canvas = document.getElementById("scene");
 const w = canvas.clientWidth;
@@ -12,8 +13,8 @@ renderer.setSize(w, h, false);
 // Perspective camera
 const fov = 45;
 const aspect = w / h;
-const near = 0.1;
-const far = 10;
+const near = 0.001;
+const far = 2000;
 const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
 camera.position.z = 5;
 
@@ -21,7 +22,9 @@ camera.position.z = 5;
 const scene = new THREE.Scene();
 
 // define orbitcontrols
-const controls = new OrbitControls(camera, renderer.domElement);
+const controls = new TrackballControls(camera, renderer.domElement);
+// controls.enableDamping = true;
+controls.dynamicDampingFactor = 0.05;
 
 // Geo
 const geo = new THREE.IcosahedronGeometry(1.0, 3);
@@ -47,6 +50,9 @@ function animate(t=0) {
         camera.aspect = w / h;
         camera.updateProjectionMatrix();
     }
+
+    // damping
+    controls.update();
 
     // rotation
     mesh.rotation.x = t * 0.00015;
