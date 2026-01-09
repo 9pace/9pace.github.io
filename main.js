@@ -60,3 +60,28 @@ function animate(t=0) {
     renderer.render(scene, camera);
 }
 animate();
+
+let buffer = "";
+const display = document.querySelector('.terminal');
+
+document.addEventListener('keydown', function(e) {
+    console.log(e.key);
+
+    
+    // Only single char keys
+    if(e.key.length === 1){
+        buffer += e.key;
+        display.textContent = buffer;
+    } else if (e.key === "Backspace"){
+        buffer = buffer.slice(0, -1);
+        display.textContent = buffer;
+    }
+    
+    if (buffer.includes('mono')) {
+        document.documentElement.classList.toggle('grayscale');
+        document.body.classList.toggle('grayscale');
+
+        buffer = "";
+        display.textContent = buffer;
+    }
+});
