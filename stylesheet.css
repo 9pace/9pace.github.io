@@ -14,6 +14,11 @@ body {
     color: black;
 }
 
+a {
+    text-decoration: none;
+    color: black
+}
+
 body.grayscale {
     background-color: #ccc;
 }
