@@ -14,6 +14,15 @@ body {
     color: black;
 }
 
+p {
+    -webkit-text-stroke: 0.8px currentColor;
+}
+
+img {
+    max-width: 400px;
+    border: 6px solid black;
+}
+
 a {
     text-decoration: none;
     color: black
@@ -53,5 +62,4 @@ html.grayscale {
     justify-self: start;
     
     caret-color: transparent;
-
 }
