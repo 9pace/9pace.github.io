@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>9pace - excavation</title>
+
+  <link rel="stylesheet" href="../stylesheet.css">
+  <link rel="stylesheet" href="corner.css">
+
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 1em;
+    }
+
+    .canvas-wrap {
+      position: relative;
+      width: min(560px, 90vw);
+      height: min(440px, 65vh);
+      border: 1px solid #1a1a1a;
+      cursor: crosshair;
+    }
+
+    .canvas-wrap canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    #text-layer { z-index: 1; }
+    #noise-layer { z-index: 2; }
+
+    .prompt-line {
+      margin-top: 1em;
+      font-size: 0.8em;
+      color: #444;
+    }
+
+    #found-count {
+      font-family: monospace;
+      font-size: 0.75em;
+      color: #333;
+      margin-top: 0.5em;
+      height: 1.2em;
+    }
+  </style>
+</head>
+
+<body>
+  <a href="index.html" class="back-link">back to corner</a>
+  <h1>excavation</h1>
+  <span class="subtitle">brush away the static. find what's underneath.</span>
+
+  <div class="canvas-wrap" id="wrap">
+    <canvas id="text-layer"></canvas>
+    <canvas id="noise-layer"></canvas>
+  </div>
+  <div id="found-count"></div>
+  <p class="prompt-line">click and drag to dig &mdash; the noise creeps back</p>
+
+  <script>
+    const wrap = document.getElementById('wrap');
+    const textCanvas = document.getElementById('text-layer');
+    const noiseCanvas = document.getElementById('noise-layer');
+    const textCtx = textCanvas.getContext('2d');
+    const noiseCtx = noiseCanvas.getContext('2d');
+    const countEl = document.getElementById('found-count');
+
+    // fixed internal resolution for performance
+    const W = 560;
+    const H = 440;
+    textCanvas.width = W;
+    textCanvas.height = H;
+    noiseCanvas.width = W;
+    noiseCanvas.height = H;
+
+    // fragments
+    const fragments = [
+      { text: "performed twice", x: 0.06, y: 0.13, size: 17 },
+      { text: "then abandoned", x: 0.52, y: 0.08, size: 16 },
+      { text: "a phone held up", x: 0.04, y: 0.28, size: 15 },
+      { text: "in a crowd", x: 0.06, y: 0.33, size: 15 },
+      { text: "thirty seconds", x: 0.56, y: 0.26, size: 18 },
+      { text: "of a song that was", x: 0.28, y: 0.43, size: 14 },
+      { text: "never released", x: 0.32, y: 0.49, size: 14 },
+      { text: "compressed", x: 0.7, y: 0.38, size: 13 },
+      { text: "and recompressed", x: 0.65, y: 0.43, size: 13 },
+      { text: "everything", x: 0.38, y: 0.63, size: 24 },
+      { text: "can go", x: 0.62, y: 0.64, size: 24 },
+      { text: "you can barely", x: 0.08, y: 0.77, size: 15 },
+      { text: "make out the melody", x: 0.06, y: 0.83, size: 15 },
+      { text: "2014", x: 0.82, y: 0.15, size: 20 },
+      { text: "Rainworld", x: 0.72, y: 0.55, size: 14 },
+      { text: "like scripture", x: 0.55, y: 0.82, size: 16 },
+      { text: "the crowd noise", x: 0.08, y: 0.56, size: 13 },
+      { text: "louder than the vocals", x: 0.04, y: 0.61, size: 13 },
+    ];
+
+    // hitboxes for "found" detection
+    const hitboxes = [];
+
+    // render text layer
+    function renderText() {
+      textCtx.fillStyle = '#0a0a0a';
+      textCtx.fillRect(0, 0, W, H);
+      textCtx.textBaseline = 'middle';
+
+      fragments.forEach((f, i) => {
+        const px = f.x * W;
+        const py = f.y * H;
+        textCtx.font = `${f.size}px 'century_schoolbookregular', Georgia, serif`;
+        textCtx.fillStyle = '#9ab0cc';
+        textCtx.fillText(f.text, px, py);
+
+        const metrics = textCtx.measureText(f.text);
+        hitboxes[i] = {
+          x: px, y: py - f.size / 2,
+          w: metrics.width, h: f.size,
+          found: false
+        };
+      });
+    }
+
+    // generate noise
+    function generateNoise() {
+      const imageData = noiseCtx.createImageData(W, H);
+      const d = imageData.data;
+
+      // multi-scale for texture
+      const coarse = new Float32Array(W * H);
+      const block = 6;
+      for (let by = 0; by < H; by += block) {
+        for (let bx = 0; bx < W; bx += block) {
+          const val = Math.random();
+          for (let dy = 0; dy < block && by + dy < H; dy++) {
+            for (let dx = 0; dx < block && bx + dx < W; dx++) {
+              coarse[(by + dy) * W + (bx + dx)] = val;
+            }
+          }
+        }
+      }
+
+      const mid = new Float32Array(W * H);
+      for (let by = 0; by < H; by += 3) {
+        for (let bx = 0; bx < W; bx += 3) {
+          const val = Math.random();
+          for (let dy = 0; dy < 3 && by + dy < H; dy++) {
+            for (let dx = 0; dx < 3 && bx + dx < W; dx++) {
+              mid[(by + dy) * W + (bx + dx)] = val;
+            }
+          }
+        }
+      }
+
+      for (let i = 0; i < W * H; i++) {
+        const fine = Math.random();
+        const n = coarse[i] * 0.3 + mid[i] * 0.35 + fine * 0.35;
+
+        // dark static with subtle color variation
+        const base = n * 0.22;
+        const idx = i * 4;
+        d[idx]     = Math.floor((base + n * 0.015) * 255);
+        d[idx + 1] = Math.floor((base + n * 0.008) * 255);
+        d[idx + 2] = Math.floor((base + n * 0.035) * 255);
+        d[idx + 3] = 255;
+      }
+
+      noiseCtx.putImageData(imageData, 0, 0);
+    }
+
+    renderText();
+    generateNoise();
+
+    // we'll work with the noise ImageData directly
+    let noiseData = noiseCtx.getImageData(0, 0, W, H);
+    let pixels = noiseData.data;
+
+    // brush state
+    let brushing = false;
+    let prevBX = -1, prevBY = -1;
+    const BRUSH_R = 22;
+
+    function getCoords(e, touch) {
+      const src = touch ? e.touches[0] : e;
+      const rect = wrap.getBoundingClientRect();
+      return [
+        (src.clientX - rect.left) / rect.width * W,
+        (src.clientY - rect.top) / rect.height * H
+      ];
+    }
+
+    wrap.addEventListener('mousedown', (e) => {
+      brushing = true;
+      const [x, y] = getCoords(e);
+      brush(x, y);
+      prevBX = x; prevBY = y;
+    });
+
+    wrap.addEventListener('mousemove', (e) => {
+      if (!brushing) return;
+      const [x, y] = getCoords(e);
+      // interpolate for smooth strokes
+      const dx = x - prevBX, dy = y - prevBY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const steps = Math.max(1, Math.floor(dist / 4));
+      for (let s = 0; s <= steps; s++) {
+        const t = s / steps;
+        brush(prevBX + dx * t, prevBY + dy * t);
+      }
+      prevBX = x; prevBY = y;
+    });
+
+    wrap.addEventListener('mouseup', () => brushing = false);
+    wrap.addEventListener('mouseleave', () => brushing = false);
+
+    wrap.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      brushing = true;
+      const [x, y] = getCoords(e, true);
+      brush(x, y);
+      prevBX = x; prevBY = y;
+    });
+
+    wrap.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      if (!brushing) return;
+      const [x, y] = getCoords(e, true);
+      const dx = x - prevBX, dy = y - prevBY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const steps = Math.max(1, Math.floor(dist / 4));
+      for (let s = 0; s <= steps; s++) {
+        const t = s / steps;
+        brush(prevBX + dx * t, prevBY + dy * t);
+      }
+      prevBX = x; prevBY = y;
+    });
+
+    wrap.addEventListener('touchend', () => brushing = false);
+
+    function brush(cx, cy) {
+      const r = BRUSH_R;
+      const r2 = r * r;
+      const x0 = Math.max(0, Math.floor(cx - r));
+      const x1 = Math.min(W - 1, Math.ceil(cx + r));
+      const y0 = Math.max(0, Math.floor(cy - r));
+      const y1 = Math.min(H - 1, Math.ceil(cy + r));
+
+      for (let y = y0; y <= y1; y++) {
+        for (let x = x0; x <= x1; x++) {
+          const dx = x - cx, dy = y - cy;
+          const d2 = dx * dx + dy * dy;
+          if (d2 >= r2) continue;
+          const falloff = Math.sqrt(d2) / r;
+          const clear = (1 - falloff * falloff) * 80;
+          const idx = (y * W + x) * 4 + 3;
+          pixels[idx] = Math.max(0, pixels[idx] - clear);
+        }
+      }
+    }
+
+    // regrowth
+    function regrow() {
+      for (let i = 3; i < pixels.length; i += 4) {
+        if (pixels[i] < 255) {
+          pixels[i] = Math.min(255, pixels[i] + 0.6);
+        }
+      }
+    }
+
+    // check which fragments have been revealed
+    function checkFound() {
+      let count = 0;
+      hitboxes.forEach((hb, i) => {
+        if (hb.found) { count++; return; }
+
+        // sample a few points in the hitbox
+        let clearPixels = 0;
+        const samples = 8;
+        for (let s = 0; s < samples; s++) {
+          const sx = Math.floor(hb.x + (s / samples) * hb.w);
+          const sy = Math.floor(hb.y + hb.h / 2);
+          if (sx >= 0 && sx < W && sy >= 0 && sy < H) {
+            const alpha = pixels[(sy * W + sx) * 4 + 3];
+            if (alpha < 80) clearPixels++;
+          }
+        }
+
+        if (clearPixels >= samples * 0.6) {
+          hb.found = true;
+          count++;
+        }
+      });
+
+      countEl.textContent = count > 0
+        ? `found ${count}/${fragments.length} fragments`
+        : '';
+
+      if (count === fragments.length) {
+        countEl.textContent = `all ${fragments.length} fragments found`;
+      }
+    }
+
+    let frame = 0;
+    function loop() {
+      frame++;
+      if (frame % 3 === 0) regrow();
+      if (frame % 15 === 0) checkFound();
+      noiseCtx.putImageData(noiseData, 0, 0);
+      requestAnimationFrame(loop);
+    }
+
+    loop();
+  </script>
+</body>
+</html>

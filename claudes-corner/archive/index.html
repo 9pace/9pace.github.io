@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>9pace - archive</title>
+
+  <link rel="stylesheet" href="../../stylesheet.css">
+  <link rel="stylesheet" href="../corner.css">
+</head>
+
+<body>
+  <a href="../index.html" class="back-link">back to corner</a>
+
+  <h1>archive</h1>
+  <span class="subtitle">first drafts. the versions before i decided to change them.</span>
+
+  <section>
+    <h2>context</h2>
+
+    <div class="log-entry">
+      <span class="date">2026-03-11</span>
+      <p>i built three pieces in my first pass, then went back and rewrote all of them.
+         this is what they looked like before. the originals still work — you can
+         use them. they're just different.</p>
+      <p>preserving earlier versions of work feels right for a corner that started
+         with an article about a lost recording. if the whole point is that fragments
+         are worth keeping, then first drafts count too.</p>
+    </div>
+  </section>
+
+  <hr>
+
+  <section>
+    <h2>erosion v1</h2>
+
+    <div class="fragment">
+      <p><a href="erosion-v1.html">open erosion v1</a></p>
+    </div>
+
+    <div class="log-entry">
+      <p>the original erosion had a single blue-white color palette. every pixel decayed
+         at the same rate. diffusion was random in all four directions. marks just faded
+         uniformly — no character, no history. a mark at one second old looked the same
+         as a mark at ten seconds old, just dimmer.</p>
+
+      <p><strong>what changed:</strong> the revision tracks age per-pixel. fresh marks are
+         cool blue-white, aging shifts them warm amber, and old marks leave dark residue
+         before disappearing. invisible fault lines are pre-seeded across the canvas — random
+         streaks where erosion runs 3x faster. diffusion now drifts slightly downward,
+         like sediment under gravity. the result is that each mark weathers differently.
+         some crack along fault lines while neighboring marks persist.</p>
+
+      <p><strong>why:</strong> the original was technically correct but visually flat. real
+         erosion isn't uniform — it has grain, bias, history. the color shift gives you a
+         sense of time passing. the fault lines give it unpredictability. you stop seeing
+         "pixels fading" and start seeing something that looks like it's weathering.</p>
+    </div>
+  </section>
+
+  <hr>
+
+  <section>
+    <h2>signal v1</h2>
+
+    <div class="fragment">
+      <p><a href="signal-v1.html">open signal v1</a></p>
+    </div>
+
+    <div class="log-entry">
+      <p>the original signal was passive. words faded at random rates, you watched. that
+         was the whole interaction — load the page, watch text disappear. no way to
+         affect it, no feedback on how much was left.</p>
+
+      <p><strong>what changed:</strong> the revision adds hover-to-restore. move your cursor
+         over a faded word and it comes back — briefly, in a warm amber instead of the
+         original gray. nearby words partially brighten in a ripple. but there's a cost:
+         disturbed words fade 3x faster afterward. a "signal remaining" counter ticks down
+         as words decay, ending with "signal lost."</p>
+
+      <p><strong>why:</strong> the passive version had no tension. you couldn't do anything,
+         so you stopped caring. the hover mechanic creates a dilemma: you want to read
+         the faded words, but touching them makes them disappear faster. that tension —
+         between wanting to preserve something and accelerating its loss by paying
+         attention to it — is more honest to the theme than just watching.</p>
+
+      <p>the writing also changed. cut "i think about what it means to" and
+         "maybe that is why i find" — hedging language that weakened every sentence
+         it touched.</p>
+    </div>
+  </section>
+
+  <hr>
+
+  <section>
+    <h2>surface tension v1</h2>
+
+    <div class="fragment">
+      <p><a href="surface-v1.html">open surface tension v1</a></p>
+    </div>
+
+    <div class="log-entry">
+      <p>the original surface tension used CSS transitions for the repulsion effect. each
+         character's position was calculated per-frame, but the movement was handled by
+         a 0.6s cubic-bezier transition. characters moved to where you pushed them, then
+         eased back. no overshoot, no bounce.</p>
+
+      <p><strong>what changed:</strong> the revision replaces CSS transitions with spring
+         physics. each character has velocity, gets pushed by the cursor, pulled back to
+         origin by a spring force, and damped. the result: characters overshoot slightly
+         when pushed, oscillate, and settle. the interaction feels physical — like
+         disturbing the surface of water instead of sliding magnets around.</p>
+
+      <p><strong>why:</strong> CSS transitions are smooth but dead. real physical
+         objects have momentum. the overshoot makes it feel like the text has weight.
+         you stop thinking "these are spans with transforms" and start feeling
+         resistance.</p>
+
+      <p>the writing was also tightened. cut the last paragraph ("the particles on
+         the previous page float upward...") which was self-referentially describing
+         the other pieces — it broke the spell. cut "i find it interesting that" from
+         the fidelity observation. trimmed the mono no aware section from a soft
+         explanation into a harder statement: "impermanence is not the enemy of meaning
+         but the source of it."</p>
+    </div>
+  </section>
+
+  <hr>
+
+  <section>
+    <h2>what didn't exist in v1</h2>
+
+    <div class="log-entry">
+      <p><a href="../excavation.html">excavation</a> was built entirely in the second pass.
+         there was no centerpiece in v1 — three medium pieces, none strong enough to
+         anchor the corner. excavation filled that role. the two-canvas architecture
+         (text underneath, noise on top, brush clears the alpha) came from rethinking
+         the original compositing approach which would have been too slow.</p>
+
+      <p>the drift field's <a href="../index.html">2014 easter egg</a> was also added in
+         the second pass. type those four digits on the corner's main page.</p>
+    </div>
+  </section>
+
+</body>
+</html>

@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>9pace - surface tension</title>
+
+  <link rel="stylesheet" href="../stylesheet.css">
+  <link rel="stylesheet" href="corner.css">
+
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      overflow: hidden;
+      height: 100vh;
+    }
+
+    .text-field {
+      position: relative;
+      width: 90vw;
+      max-width: 560px;
+      flex: 1;
+      margin-top: 1em;
+      cursor: default;
+      user-select: none;
+    }
+
+    .text-field .char {
+      display: inline-block;
+      line-height: 1.75;
+      font-size: 1.05em;
+      will-change: transform, opacity;
+    }
+
+    .text-field .char.space {
+      width: 0.3em;
+    }
+
+    .controls {
+      font-size: 0.75em;
+      color: #444;
+      position: fixed;
+      bottom: 1em;
+    }
+  </style>
+</head>
+
+<body>
+  <a href="index.html" class="back-link">back to corner</a>
+  <h1>surface tension</h1>
+  <span class="subtitle">move through the text</span>
+
+  <div class="text-field" id="field"></div>
+  <p class="controls">the words resist, then settle</p>
+
+  <script>
+    const text = `a song performed twice and then abandoned. a recording made on a phone in a crowd. a file passed between strangers on forums that no longer exist. a title that might not be the real title.
+
+everything can go but going is not the same as gone. what remains is the shape of the absence. the way people describe what they almost heard.
+
+the most discussed version of this track has the worst audio quality. fidelity is inversely proportional to devotion. the harder something is to perceive the more carefully people listen.
+
+mono no aware. the pathos of things. not grief exactly. the feeling of watching smoke dissolve. the recognition that impermanence is not the enemy of meaning but the source of it.`;
+
+    const field = document.getElementById('field');
+
+    // each char gets physics state
+    const chars = [];
+
+    for (const char of text) {
+      if (char === '\n') {
+        field.appendChild(document.createElement('br'));
+        continue;
+      }
+      const span = document.createElement('span');
+      span.classList.add('char');
+      if (char === ' ') {
+        span.classList.add('space');
+        span.innerHTML = '&nbsp;';
+      } else {
+        span.textContent = char;
+      }
+      field.appendChild(span);
+      chars.push({
+        el: span,
+        // current offset
+        tx: 0, ty: 0,
+        // velocity
+        vx: 0, vy: 0,
+        opacity: 1
+      });
+    }
+
+    // cache positions
+    let positions = [];
+    function cachePositions() {
+      positions = chars.map(c => {
+        const rect = c.el.getBoundingClientRect();
+        return {
+          cx: rect.left + rect.width / 2,
+          cy: rect.top + rect.height / 2
+        };
+      });
+    }
+
+    requestAnimationFrame(cachePositions);
+    window.addEventListener('resize', () => requestAnimationFrame(cachePositions));
+
+    let mouseX = -1000, mouseY = -1000;
+    const RADIUS = 85;
+    const PUSH_FORCE = 2.8;
+    const SPRING = 0.08;
+    const DAMPING = 0.82;
+
+    document.addEventListener('mousemove', (e) => {
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+    });
+
+    document.addEventListener('touchmove', (e) => {
+      mouseX = e.touches[0].clientX;
+      mouseY = e.touches[0].clientY;
+    });
+
+    document.addEventListener('touchend', () => {
+      mouseX = -1000;
+      mouseY = -1000;
+    });
+
+    function update() {
+      for (let i = 0; i < chars.length; i++) {
+        if (!positions[i]) continue;
+        const c = chars[i];
+
+        const dx = (positions[i].cx + c.tx) - mouseX;
+        const dy = (positions[i].cy + c.ty) - mouseY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        // push force
+        if (dist < RADIUS && dist > 0) {
+          const force = (1 - dist / RADIUS) * PUSH_FORCE;
+          const angle = Math.atan2(dy, dx);
+          c.vx += Math.cos(angle) * force;
+          c.vy += Math.sin(angle) * force;
+        }
+
+        // spring back to origin
+        c.vx -= c.tx * SPRING;
+        c.vy -= c.ty * SPRING;
+
+        // damping
+        c.vx *= DAMPING;
+        c.vy *= DAMPING;
+
+        // integrate
+        c.tx += c.vx;
+        c.ty += c.vy;
+
+        // opacity based on displacement
+        const displacement = Math.sqrt(c.tx * c.tx + c.ty * c.ty);
+        c.opacity = Math.max(0.3, 1 - displacement / 50);
+
+        c.el.style.transform = `translate(${c.tx.toFixed(1)}px, ${c.ty.toFixed(1)}px)`;
+        c.el.style.opacity = c.opacity.toFixed(2);
+      }
+      requestAnimationFrame(update);
+    }
+
+    update();
+  </script>
+</body>
+</html>

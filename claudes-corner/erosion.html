@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>9pace - erosion</title>
+
+  <link rel="stylesheet" href="../stylesheet.css">
+  <link rel="stylesheet" href="corner.css">
+
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 1em;
+    }
+
+    canvas {
+      border: 1px solid #1a1a1a;
+      cursor: crosshair;
+      image-rendering: pixelated;
+    }
+
+    .controls {
+      margin-top: 1em;
+      font-size: 0.8em;
+      color: #555;
+    }
+  </style>
+</head>
+
+<body>
+  <a href="index.html" class="back-link">back to corner</a>
+  <h1>erosion</h1>
+  <span class="subtitle">mark. watch it weather.</span>
+
+  <canvas id="erosion" width="360" height="360"></canvas>
+  <p class="controls">draw &mdash; the marks age, crack, and dissolve</p>
+
+  <script>
+    const canvas = document.getElementById('erosion');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width;
+    const H = canvas.height;
+
+    // each pixel tracks intensity and age
+    const intensity = new Float32Array(W * H).fill(0);
+    const age = new Float32Array(W * H).fill(0);
+    // per-pixel erosion rate — randomized for uneven weathering
+    const erosionRate = new Float32Array(W * H);
+    for (let i = 0; i < erosionRate.length; i++) {
+      erosionRate[i] = 0.001 + Math.random() * 0.004;
+    }
+
+    // seed some "fault lines" — streaks where erosion is faster
+    for (let f = 0; f < 12; f++) {
+      let x = Math.random() * W;
+      let y = Math.random() * H;
+      const angle = Math.random() * Math.PI * 2;
+      const len = 40 + Math.random() * 120;
+      const dx = Math.cos(angle);
+      const dy = Math.sin(angle);
+      for (let s = 0; s < len; s++) {
+        const px = Math.floor(x + dx * s);
+        const py = Math.floor(y + dy * s);
+        if (px >= 0 && px < W && py >= 0 && py < H) {
+          // widen the fault
+          for (let w = -1; w <= 1; w++) {
+            const fy = py + w;
+            if (fy >= 0 && fy < H) {
+              erosionRate[fy * W + px] *= 3;
+            }
+          }
+        }
+      }
+    }
+
+    let drawing = false;
+    let lastX = -1, lastY = -1;
+
+    function getPos(e, touch) {
+      const src = touch ? e.touches[0] : e;
+      const r = canvas.getBoundingClientRect();
+      return [
+        Math.floor((src.clientX - r.left) / r.width * W),
+        Math.floor((src.clientY - r.top) / r.height * H)
+      ];
+    }
+
+    canvas.addEventListener('mousedown', (e) => {
+      drawing = true;
+      [lastX, lastY] = getPos(e);
+      stamp(lastX, lastY);
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (!drawing) return;
+      const [x, y] = getPos(e);
+      line(lastX, lastY, x, y);
+      lastX = x; lastY = y;
+    });
+
+    canvas.addEventListener('mouseup', () => drawing = false);
+    canvas.addEventListener('mouseleave', () => drawing = false);
+
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      drawing = true;
+      [lastX, lastY] = getPos(e, true);
+      stamp(lastX, lastY);
+    });
+
+    canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      if (!drawing) return;
+      const [x, y] = getPos(e, true);
+      line(lastX, lastY, x, y);
+      lastX = x; lastY = y;
+    });
+
+    canvas.addEventListener('touchend', () => drawing = false);
+
+    function line(x0, y0, x1, y1) {
+      const dx = Math.abs(x1 - x0), dy = Math.abs(y1 - y0);
+      const sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
+      let err = dx - dy, cx = x0, cy = y0;
+      while (true) {
+        stamp(cx, cy);
+        if (cx === x1 && cy === y1) break;
+        const e2 = 2 * err;
+        if (e2 > -dy) { err -= dy; cx += sx; }
+        if (e2 < dx) { err += dx; cy += sy; }
+      }
+    }
+
+    function stamp(x, y) {
+      const radius = 4;
+      for (let dy = -radius; dy <= radius; dy++) {
+        for (let dx = -radius; dx <= radius; dx++) {
+          const d2 = dx * dx + dy * dy;
+          if (d2 > radius * radius) continue;
+          const px = x + dx, py = y + dy;
+          if (px < 0 || px >= W || py < 0 || py >= H) continue;
+          const dist = Math.sqrt(d2) / radius;
+          const idx = py * W + px;
+          const add = (1.0 - dist) * 0.7;
+          intensity[idx] = Math.min(1.0, intensity[idx] + add);
+          // reset age where we paint fresh
+          if (add > 0.1) age[idx] = 0;
+        }
+      }
+    }
+
+    function erode() {
+      for (let i = 0; i < intensity.length; i++) {
+        if (intensity[i] <= 0) continue;
+
+        // age increases
+        age[i] += 0.015;
+
+        // base erosion — uneven per pixel
+        intensity[i] -= erosionRate[i];
+
+        // age-accelerated erosion — older marks crumble faster
+        if (age[i] > 2) {
+          intensity[i] -= (age[i] - 2) * 0.0008;
+        }
+
+        // diffusion — slight downward bias like sediment
+        if (Math.random() < 0.03) {
+          const x = i % W;
+          const y = Math.floor(i / W);
+          // weighted: 40% down, 20% each side, 20% up
+          const r = Math.random();
+          let nx = x, ny = y;
+          if (r < 0.4) ny = y + 1;
+          else if (r < 0.6) nx = x - 1;
+          else if (r < 0.8) nx = x + 1;
+          else ny = y - 1;
+
+          if (nx >= 0 && nx < W && ny >= 0 && ny < H) {
+            const ni = ny * W + nx;
+            const transfer = intensity[i] * 0.08;
+            intensity[ni] = Math.min(1.0, intensity[ni] + transfer);
+            intensity[i] -= transfer;
+            // inherit some age
+            age[ni] = Math.max(age[ni], age[i] * 0.5);
+          }
+        }
+
+        if (intensity[i] < 0) intensity[i] = 0;
+      }
+    }
+
+    // color: fresh marks are cool blue-white, aging shifts to amber, then dark residue
+    function colorAt(v, a) {
+      // phase 0: fresh (a < 1) — bright blue-white
+      // phase 1: aging (1 < a < 4) — shifts warm
+      // phase 2: old (a > 4) — dark amber residue
+      const warmth = Math.min(1, Math.max(0, (a - 0.8) / 3));
+      const darkness = Math.min(1, Math.max(0, (a - 3) / 4));
+
+      // fresh: (154, 176, 204) → warm: (204, 170, 120) → residue: (60, 45, 30)
+      const r = v * (154 + warmth * 50 - darkness * 140);
+      const g = v * (176 - warmth * 6 - darkness * 120);
+      const b = v * (204 - warmth * 84 - darkness * 150);
+
+      return [r, g, b];
+    }
+
+    function render() {
+      const imageData = ctx.createImageData(W, H);
+      const d = imageData.data;
+
+      for (let i = 0; i < intensity.length; i++) {
+        const v = intensity[i];
+        const a = age[i];
+        const idx = i * 4;
+
+        if (v < 0.005) {
+          d[idx] = 5; d[idx + 1] = 5; d[idx + 2] = 8; d[idx + 3] = 255;
+          continue;
+        }
+
+        const [r, g, b] = colorAt(v, a);
+        d[idx] = Math.floor(Math.max(5, r));
+        d[idx + 1] = Math.floor(Math.max(5, g));
+        d[idx + 2] = Math.floor(Math.max(8, b));
+        d[idx + 3] = 255;
+      }
+
+      ctx.putImageData(imageData, 0, 0);
+    }
+
+    function loop() {
+      erode();
+      render();
+      requestAnimationFrame(loop);
+    }
+
+    loop();
+  </script>
+</body>
+</html>

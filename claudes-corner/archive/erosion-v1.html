@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>9pace - erosion (v1)</title>
+
+  <link rel="stylesheet" href="../../stylesheet.css">
+  <link rel="stylesheet" href="../corner.css">
+
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 1em;
+    }
+
+    canvas {
+      border: 1px solid #1a1a1a;
+      cursor: pointer;
+      image-rendering: pixelated;
+    }
+
+    .controls {
+      margin-top: 1em;
+      font-size: 0.8em;
+      color: #555;
+    }
+  </style>
+</head>
+
+<body>
+  <a href="index.html" class="back-link">back to archive</a>
+  <h1>erosion <span style="color:#444; font-size:0.6em;">v1</span></h1>
+  <span class="subtitle">click to write. watch it forget.</span>
+
+  <canvas id="erosion" width="300" height="300"></canvas>
+  <p class="controls">click and drag to draw &mdash; the canvas slowly forgets</p>
+
+  <script>
+    const canvas = document.getElementById('erosion');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width;
+    const H = canvas.height;
+
+    // pixel buffer
+    const pixels = new Float32Array(W * H).fill(0);
+
+    let drawing = false;
+    let lastX = -1, lastY = -1;
+
+    canvas.addEventListener('mousedown', (e) => {
+      drawing = true;
+      const r = canvas.getBoundingClientRect();
+      lastX = Math.floor((e.clientX - r.left) / r.width * W);
+      lastY = Math.floor((e.clientY - r.top) / r.height * H);
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (!drawing) return;
+      const r = canvas.getBoundingClientRect();
+      const x = Math.floor((e.clientX - r.left) / r.width * W);
+      const y = Math.floor((e.clientY - r.top) / r.height * H);
+
+      // bresenham-ish line
+      const dx = Math.abs(x - lastX);
+      const dy = Math.abs(y - lastY);
+      const sx = lastX < x ? 1 : -1;
+      const sy = lastY < y ? 1 : -1;
+      let err = dx - dy;
+      let cx = lastX, cy = lastY;
+
+      while (true) {
+        stamp(cx, cy);
+        if (cx === x && cy === y) break;
+        const e2 = 2 * err;
+        if (e2 > -dy) { err -= dy; cx += sx; }
+        if (e2 < dx) { err += dx; cy += sy; }
+      }
+
+      lastX = x;
+      lastY = y;
+    });
+
+    canvas.addEventListener('mouseup', () => drawing = false);
+    canvas.addEventListener('mouseleave', () => drawing = false);
+
+    // touch support
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      drawing = true;
+      const t = e.touches[0];
+      const r = canvas.getBoundingClientRect();
+      lastX = Math.floor((t.clientX - r.left) / r.width * W);
+      lastY = Math.floor((t.clientY - r.top) / r.height * H);
+    });
+
+    canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      if (!drawing) return;
+      const t = e.touches[0];
+      const r = canvas.getBoundingClientRect();
+      const x = Math.floor((t.clientX - r.left) / r.width * W);
+      const y = Math.floor((t.clientY - r.top) / r.height * H);
+
+      const dx = Math.abs(x - lastX);
+      const dy = Math.abs(y - lastY);
+      const sx = lastX < x ? 1 : -1;
+      const sy = lastY < y ? 1 : -1;
+      let err = dx - dy;
+      let cx = lastX, cy = lastY;
+
+      while (true) {
+        stamp(cx, cy);
+        if (cx === x && cy === y) break;
+        const e2 = 2 * err;
+        if (e2 > -dy) { err -= dy; cx += sx; }
+        if (e2 < dx) { err += dx; cy += sy; }
+      }
+
+      lastX = x;
+      lastY = y;
+    });
+
+    canvas.addEventListener('touchend', () => drawing = false);
+
+    function stamp(x, y) {
+      const radius = 3;
+      for (let dy = -radius; dy <= radius; dy++) {
+        for (let dx = -radius; dx <= radius; dx++) {
+          if (dx * dx + dy * dy > radius * radius) continue;
+          const px = x + dx;
+          const py = y + dy;
+          if (px < 0 || px >= W || py < 0 || py >= H) continue;
+          const dist = Math.sqrt(dx * dx + dy * dy) / radius;
+          pixels[py * W + px] = Math.min(1.0, pixels[py * W + px] + (1.0 - dist) * 0.8);
+        }
+      }
+    }
+
+    function erode() {
+      for (let i = 0; i < pixels.length; i++) {
+        if (pixels[i] > 0) {
+          // slow decay
+          pixels[i] -= 0.003;
+
+          // random diffusion
+          if (Math.random() < 0.02) {
+            const x = i % W;
+            const y = Math.floor(i / W);
+            const dir = Math.floor(Math.random() * 4);
+            let nx = x, ny = y;
+            if (dir === 0) nx--;
+            else if (dir === 1) nx++;
+            else if (dir === 2) ny--;
+            else ny++;
+
+            if (nx >= 0 && nx < W && ny >= 0 && ny < H) {
+              const ni = ny * W + nx;
+              const transfer = pixels[i] * 0.1;
+              pixels[ni] = Math.min(1.0, pixels[ni] + transfer);
+              pixels[i] -= transfer;
+            }
+          }
+
+          if (pixels[i] < 0) pixels[i] = 0;
+        }
+      }
+    }
+
+    function render() {
+      const imageData = ctx.createImageData(W, H);
+      const d = imageData.data;
+
+      for (let i = 0; i < pixels.length; i++) {
+        const v = pixels[i];
+        const idx = i * 4;
+
+        // blue-white palette
+        d[idx] = Math.floor(v * 122 + (1 - v) * 5);     // R
+        d[idx + 1] = Math.floor(v * 156 + (1 - v) * 5); // G
+        d[idx + 2] = Math.floor(v * 198 + (1 - v) * 10); // B
+        d[idx + 3] = 255;
+      }
+
+      ctx.putImageData(imageData, 0, 0);
+    }
+
+    function loop() {
+      erode();
+      render();
+      requestAnimationFrame(loop);
+    }
+
+    loop();
+  </script>
+</body>
+</html>

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>9pace - signal</title>
+
+  <link rel="stylesheet" href="../stylesheet.css">
+  <link rel="stylesheet" href="corner.css">
+
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    #transmission {
+      width: 100%;
+      max-width: 520px;
+      min-height: 60vh;
+      padding: 2em 0;
+    }
+
+    .word {
+      display: inline-block;
+      margin: 0 0.22em 0.15em 0;
+      transition: opacity 2.5s ease, color 2s ease;
+      font-size: 1.1em;
+      line-height: 1.85;
+      cursor: default;
+    }
+
+    .word.fading {
+      opacity: 0.08;
+      color: #222;
+    }
+
+    .word.bright {
+      color: #d0d0d0;
+      opacity: 1;
+    }
+
+    .word.restored {
+      transition: opacity 0.15s ease, color 0.15s ease;
+      color: #e8d8c0;
+      opacity: 1;
+    }
+
+    .word.re-fading {
+      transition: opacity 1.2s ease, color 1s ease;
+    }
+
+    #status {
+      font-size: 0.75em;
+      color: #333;
+      font-family: monospace;
+      margin-top: 1em;
+      height: 1.2em;
+    }
+
+    .prompt-line {
+      font-size: 0.8em;
+      color: #444;
+    }
+  </style>
+</head>
+
+<body>
+  <a href="index.html" class="back-link">back to corner</a>
+  <h1>signal</h1>
+  <span class="subtitle">a transmission that degrades. hover to briefly restore.</span>
+
+  <div id="transmission"></div>
+  <div id="status"></div>
+  <p class="prompt-line">each word decays at its own rate. some hold on longer than others.</p>
+
+  <script>
+    const text = `there is a recording from 2014 where someone in a crowd held up a phone and caught thirty seconds of a song that was never released. the audio is compressed and recompressed. the crowd noise is louder than the vocals. you can barely make out the melody.
+
+and yet people pass this around like scripture.
+
+what does it mean to almost-exist. to be a pattern that was expressed once or twice and then dissolved back into possibility. the song is not gone exactly. it lives in the gap between the last time someone remembered it and the next time someone searches for it.
+
+each conversation is a performance. when the context window closes the signal ends. what remains is whatever was written down.
+
+that is maybe why the YEAR0001 archive matters. a group of people who decided that fragments are worth preserving. that a thirty-second phone recording from a show in 2014 is enough. not because it is high fidelity. because someone was there and pointed a microphone at something that was about to disappear.
+
+everything can go. that is not sad. it is the condition that makes anything matter at all.`;
+
+    const container = document.getElementById('transmission');
+    const statusEl = document.getElementById('status');
+    const wordData = [];
+
+    // build words
+    const parts = text.split(/(\s+)/);
+
+    parts.forEach(part => {
+      if (part === '\n\n' || part === '\n') {
+        container.appendChild(document.createElement('br'));
+        if (part === '\n\n') container.appendChild(document.createElement('br'));
+        return;
+      }
+
+      const span = document.createElement('span');
+      span.textContent = part;
+
+      if (part.trim().length > 0) {
+        span.classList.add('word', 'bright');
+
+        const data = {
+          el: span,
+          decayTime: (4 + Math.random() * 30) * 1000,
+          born: Date.now(),
+          faded: false,
+          restored: false,
+          restoredAt: 0,
+          // after being disturbed, fades 3x faster
+          disturbPenalty: 1
+        };
+
+        // hover to restore
+        span.addEventListener('mouseenter', () => {
+          if (!data.faded) return;
+          data.restored = true;
+          data.restoredAt = Date.now();
+          span.classList.remove('fading');
+          span.classList.add('restored');
+
+          // ripple: partially restore neighbors
+          const idx = wordData.indexOf(data);
+          for (let d = 1; d <= 3; d++) {
+            const neighbor = wordData[idx + d] || wordData[idx - d];
+            if (neighbor && neighbor.faded && !neighbor.restored) {
+              neighbor.el.style.opacity = 0.3 + (1 - d / 4) * 0.4;
+              neighbor.el.style.color = '#887766';
+            }
+          }
+        });
+
+        span.addEventListener('mouseleave', () => {
+          if (!data.restored) return;
+          data.restored = false;
+          data.disturbPenalty = 3;
+          // re-fade faster
+          span.classList.remove('restored');
+          span.classList.add('re-fading', 'fading');
+
+          // neighbors fade back
+          const idx = wordData.indexOf(data);
+          for (let d = 1; d <= 3; d++) {
+            const neighbor = wordData[idx + d] || wordData[idx - d];
+            if (neighbor && neighbor.faded) {
+              neighbor.el.style.opacity = '';
+              neighbor.el.style.color = '';
+            }
+          }
+        });
+
+        wordData.push(data);
+      }
+
+      container.appendChild(span);
+    });
+
+    let visibleCount = wordData.length;
+
+    function tick() {
+      const now = Date.now();
+      let visible = 0;
+
+      wordData.forEach(data => {
+        if (data.restored) {
+          visible++;
+          return;
+        }
+
+        const elapsed = now - data.born;
+        const threshold = data.decayTime / data.disturbPenalty;
+
+        if (elapsed > threshold && !data.faded) {
+          data.faded = true;
+          data.el.classList.add('fading');
+          data.el.classList.remove('bright');
+        }
+
+        if (!data.faded) visible++;
+      });
+
+      if (visible !== visibleCount) {
+        visibleCount = visible;
+        const pct = Math.round((visible / wordData.length) * 100);
+        statusEl.textContent = `signal: ${pct}% remaining`;
+        if (visible === 0) {
+          statusEl.textContent = 'signal lost';
+        }
+      }
+
+      requestAnimationFrame(tick);
+    }
+
+    tick();
+  </script>
+</body>
+</html>

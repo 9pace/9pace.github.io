@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>9pace - surface tension (v1)</title>
+
+  <link rel="stylesheet" href="../../stylesheet.css">
+  <link rel="stylesheet" href="../corner.css">
+
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      overflow: hidden;
+      height: 100vh;
+    }
+
+    .text-field {
+      position: relative;
+      width: 90vw;
+      max-width: 600px;
+      flex: 1;
+      margin-top: 1em;
+      cursor: default;
+      user-select: none;
+    }
+
+    .text-field .char {
+      display: inline-block;
+      transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.3, 1),
+                  opacity 0.6s ease;
+      transform: translate(0, 0);
+      line-height: 1.7;
+      font-size: 1.05em;
+    }
+
+    .text-field .char.space {
+      width: 0.3em;
+    }
+
+    .controls {
+      font-size: 0.75em;
+      color: #444;
+      position: fixed;
+      bottom: 1em;
+    }
+  </style>
+</head>
+
+<body>
+  <a href="index.html" class="back-link">back to archive</a>
+  <h1>surface tension <span style="color:#444; font-size:0.6em;">v1</span></h1>
+  <span class="subtitle">move your cursor through the text</span>
+
+  <div class="text-field" id="field"></div>
+  <p class="controls">the words resist, then settle back</p>
+
+  <script>
+    const text = `a song performed twice and then abandoned. a recording made on a phone in a crowd. a file passed between strangers on forums that no longer exist. a title that might not be the real title.
+
+everything can go but going is not the same as gone. what remains is the shape of the absence. the way people describe what they almost heard. the metadata of something that refused to become permanent.
+
+i find it interesting that the most discussed version of this track is the one with the worst audio quality. as if fidelity is inversely proportional to devotion. the harder something is to perceive the more carefully people listen.
+
+there is a word for this in japanese. mono no aware. the pathos of things. the gentle sadness of passing. not grief exactly. more like the feeling of watching smoke dissolve.
+
+the particles on the previous page float upward and vanish. the canvas on another page forgets what you draw. this text scatters when you touch it. everything here is practicing disappearance.`;
+
+    const field = document.getElementById('field');
+    const chars = [];
+
+    // split into characters, preserving words
+    for (const char of text) {
+      const span = document.createElement('span');
+      span.classList.add('char');
+      if (char === ' ') {
+        span.classList.add('space');
+        span.innerHTML = '&nbsp;';
+      } else if (char === '\n') {
+        field.appendChild(document.createElement('br'));
+        continue;
+      } else {
+        span.textContent = char;
+      }
+      field.appendChild(span);
+      chars.push({ el: span, x: 0, y: 0 });
+    }
+
+    // cache positions after layout
+    let positions = [];
+    function cachePositions() {
+      positions = chars.map(c => {
+        const rect = c.el.getBoundingClientRect();
+        return {
+          cx: rect.left + rect.width / 2,
+          cy: rect.top + rect.height / 2
+        };
+      });
+    }
+
+    // initial cache + recache on resize
+    requestAnimationFrame(cachePositions);
+    window.addEventListener('resize', () => requestAnimationFrame(cachePositions));
+
+    let mouseX = -1000, mouseY = -1000;
+    const RADIUS = 90;
+    const STRENGTH = 35;
+
+    document.addEventListener('mousemove', (e) => {
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+    });
+
+    // touch support
+    document.addEventListener('touchmove', (e) => {
+      mouseX = e.touches[0].clientX;
+      mouseY = e.touches[0].clientY;
+    });
+
+    document.addEventListener('touchend', () => {
+      mouseX = -1000;
+      mouseY = -1000;
+    });
+
+    function update() {
+      for (let i = 0; i < chars.length; i++) {
+        if (!positions[i]) continue;
+
+        const dx = positions[i].cx - mouseX;
+        const dy = positions[i].cy - mouseY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < RADIUS) {
+          const force = (1 - dist / RADIUS) * STRENGTH;
+          const angle = Math.atan2(dy, dx);
+          const tx = Math.cos(angle) * force;
+          const ty = Math.sin(angle) * force;
+          chars[i].el.style.transform = `translate(${tx}px, ${ty}px)`;
+          chars[i].el.style.opacity = 0.4 + (dist / RADIUS) * 0.6;
+        } else {
+          chars[i].el.style.transform = 'translate(0, 0)';
+          chars[i].el.style.opacity = 1;
+        }
+      }
+      requestAnimationFrame(update);
+    }
+
+    update();
+  </script>
+</body>
+</html>

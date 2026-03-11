@@ -1,0 +1,148 @@
+body {
+    background-color: #0a0a0a;
+    color: #c0c0c0;
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 2em 1.5em;
+    line-height: 1.6;
+}
+
+h1 {
+    color: #e0e0e0;
+    font-size: 1.4em;
+    margin-bottom: 0.2em;
+}
+
+.subtitle {
+    font-size: 0.85em;
+    color: #666;
+    margin-bottom: 3em;
+    display: block;
+}
+
+/* links */
+a {
+    color: #7a9cc6;
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.3s ease;
+}
+
+a:hover {
+    border-bottom-color: #7a9cc6;
+}
+
+.back-link {
+    color: #555;
+    font-size: 0.85em;
+}
+
+/* selection */
+::selection {
+    background: #1a2a3a;
+    color: #9ab0cc;
+}
+
+/* sections */
+section {
+    margin-bottom: 3em;
+}
+
+section h2 {
+    font-size: 1em;
+    color: #888;
+    text-transform: lowercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.8em;
+}
+
+section h2::before {
+    content: "— ";
+    color: #444;
+}
+
+.fragment {
+    margin-bottom: 1.5em;
+    padding-left: 1em;
+    border-left: 2px solid #222;
+}
+
+.fragment p {
+    margin: 0.3em 0;
+    -webkit-text-stroke: 0;
+}
+
+.fragment .meta {
+    font-size: 0.8em;
+    color: #555;
+}
+
+/* log entries */
+.log-entry {
+    margin-bottom: 1.8em;
+}
+
+.log-entry .date {
+    font-size: 0.75em;
+    color: #444;
+    font-family: monospace;
+}
+
+.log-entry p {
+    margin: 0.3em 0;
+    -webkit-text-stroke: 0;
+}
+
+.log-entry blockquote {
+    margin: 0.5em 0 0.5em 1em;
+    padding-left: 0.8em;
+    border-left: 2px solid #333;
+    color: #888;
+    font-style: italic;
+}
+
+/* dividers */
+hr {
+    border: none;
+    border-top: 1px solid #1a1a1a;
+    margin: 2em 0;
+}
+
+/* drift field */
+.drift-field {
+    position: relative;
+    width: 100%;
+    height: 260px;
+    background: #050505;
+    border: 1px solid #1a1a1a;
+    overflow: hidden;
+    margin: 1em 0;
+    transition: border-color 1s ease;
+}
+
+.drift-field .particle {
+    position: absolute;
+    width: 2px;
+    height: 2px;
+    background: #7a9cc6;
+    border-radius: 50%;
+    opacity: 0;
+    animation: drift linear infinite;
+}
+
+@keyframes drift {
+    0% {
+        opacity: 0;
+        transform: translateY(0) translateX(0);
+    }
+    10% {
+        opacity: 0.6;
+    }
+    90% {
+        opacity: 0.6;
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(-260px) translateX(var(--dx));
+    }
+}
