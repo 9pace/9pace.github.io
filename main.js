@@ -67,7 +67,6 @@ const display = document.querySelector('.terminal');
 document.addEventListener('keydown', function(e) {
     console.log(e.key);
 
-    
     // Only single char keys
     if(e.key.length === 1){
         buffer += e.key;
@@ -78,10 +77,15 @@ document.addEventListener('keydown', function(e) {
     }
     
     if (buffer.includes('mono')) {
-        document.documentElement.classList.toggle('grayscale');
-        document.body.classList.toggle('grayscale');
+        if (! document.documentElement.classList.contains('grayscale')){
+            // first one is for the gren orb
+            document.documentElement.classList.toggle('grayscale');
+            document.body.classList.toggle('grayscale');
+        }
+    }
 
+    if (buffer.includes('clear')) {
         buffer = "";
-        display.textContent = buffer;
+        display.textContext = buffer;
     }
 });
